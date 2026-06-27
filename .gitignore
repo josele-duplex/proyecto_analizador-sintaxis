@@ -1,0 +1,14 @@
+# Editor / OS
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db
+*~
+
+# Node (si en algún momento se usa build/tooling)
+node_modules/
+npm-debug.log*
+
+# Temporales
+*.tmp
+/scratch/
