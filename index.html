@@ -58,6 +58,12 @@
     padding:6px 10px;
     line-height:1.3;
     user-select:none;
+    cursor:pointer;
+  }
+
+  .token.seleccionado{
+    background:#FEF3C7;
+    border-color:#D97706;
   }
 
   .puntuacion{
@@ -102,6 +108,25 @@
     ]
   };
 
+  // Estado de selección: ids de token actualmente seleccionados.
+  const seleccion = new Set();
+
+  function alternarSeleccion(tokenId) {
+    if (seleccion.has(tokenId)) {
+      seleccion.delete(tokenId);
+    } else {
+      seleccion.add(tokenId);
+    }
+    actualizarEstiloTokens();
+  }
+
+  function actualizarEstiloTokens() {
+    document.querySelectorAll('.token').forEach(span => {
+      const tokenId = Number(span.dataset.tokenId);
+      span.classList.toggle('seleccionado', seleccion.has(tokenId));
+    });
+  }
+
   function renderOracion(oracion) {
     const contenedor = document.getElementById('oracion');
     contenedor.innerHTML = '';
@@ -111,6 +136,7 @@
       span.className = 'token';
       span.dataset.tokenId = token.id;
       span.textContent = token.forma;
+      span.addEventListener('click', () => alternarSeleccion(token.id));
       contenedor.appendChild(span);
     });
 
