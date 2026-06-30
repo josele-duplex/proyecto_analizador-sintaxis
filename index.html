@@ -431,7 +431,11 @@
 </div>
 
 <script>
-  const oracion = {
+  // Array de oraciones disponibles (Fase 2: 3-5 oraciones). El motor de
+  // validación de abajo no conoce este array: solo trabaja con la variable
+  // `oracion` ya resuelta, así que añadir oraciones no le afecta.
+  const ORACIONES = [
+  {
     id: "oracion_001",
     texto: "Ayer los dos hermanos pequeños de María entregaron rápidamente a su profesora de Lengua un precioso ramo de flores del jardín.",
     tokens: [
@@ -498,7 +502,22 @@
         }
       ]
     }
-  };
+  }
+  ]; // fin de ORACIONES
+
+  // Selecciona la oración a trabajar: por parámetro de URL (?oracion=id)
+  // si existe y es válido, si no al azar entre todas las disponibles.
+  function seleccionarOracion() {
+    const params = new URLSearchParams(window.location.search);
+    const idPedido = params.get('oracion');
+    if (idPedido) {
+      const encontrada = ORACIONES.find(o => o.id === idPedido);
+      if (encontrada) return encontrada;
+    }
+    return ORACIONES[Math.floor(Math.random() * ORACIONES.length)];
+  }
+
+  const oracion = seleccionarOracion();
 
   // Funciones sintácticas válidas por tipo de sintagma (alcance v1: sin
   // Atributo ni C. Agente, que exigen copulativa o pasiva — fuera de v1).
