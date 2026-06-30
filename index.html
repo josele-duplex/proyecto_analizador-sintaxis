@@ -502,6 +502,45 @@
         }
       ]
     }
+  },
+  {
+    id: "oracion_002",
+    texto: "Anoche llegamos muy cansados a casa.",
+    tokens: [
+      { id: 0, forma: "Anoche",   categoria: "Adv" },
+      { id: 1, forma: "llegamos", categoria: "V" },
+      { id: 2, forma: "muy",      categoria: "Adv" },
+      { id: 3, forma: "cansados", categoria: "Adj" },
+      { id: 4, forma: "a",        categoria: "Prep" },
+      { id: 5, forma: "casa",     categoria: "Sust" }
+    ],
+
+    // Sujeto elíptico real (1ª persona del plural: "nosotros" implícito en
+    // la desinencia "-amos" de "llegamos").
+    solucion_canonica: {
+      sintagmas: [
+        { id: "s0", eliptico: true, persona: "1pl", tokens: [],    tipo: "SN",   funcion: "Sujeto" },
+        { id: "s1", tokens: [0],                     tipo: "SAdv", funcion: "CC_Tiempo", nucleo: 0 },
+        { id: "s2", tokens: [1],                     tipo: "SV",   funcion: "Predicado", nucleo: 1 },
+        { id: "s3", tokens: [2,3],                   tipo: "SAdj", funcion: "CPred",     nucleo: 3 },
+        { id: "s4", tokens: [4,5],                   tipo: "SP",   funcion: "CC_Lugar",  nucleo: 5 }
+      ]
+    },
+
+    alternativas: [],
+
+    feedback: {
+      errores_comunes: [
+        {
+          tokens: [3],
+          mensaje: "«cansados» no va solo: está modificado por «muy». El sintagma completo es «muy cansados»."
+        },
+        {
+          tokens: [1,2,3],
+          mensaje: "El verbo «llegamos» es el SV (núcleo del predicado); «muy cansados» es un complemento predicativo aparte, que se refiere al sujeto. Son dos sintagmas distintos, no uno."
+        }
+      ]
+    }
   }
   ]; // fin de ORACIONES
 
@@ -942,7 +981,14 @@
     // Sintagmas canónicos que el alumno no llegó a analizar (sin revelar
     // su tipo/función: no es un error, es algo pendiente).
     oracion.solucion_canonica.sintagmas.forEach(can => {
-      if (can.eliptico) return;
+      if (can.eliptico) {
+        const yaAnalizado = sintagmas.some(s => s.eliptico);
+        if (!yaAnalizado) {
+          items.push({ estado: 'falta', grupo: 'Sujeto elíptico',
+            texto: 'Esta oración tiene sujeto elíptico (no aparece escrito). Revisa la desinencia del verbo y márcalo con el botón «+ Sujeto elíptico».' });
+        }
+        return;
+      }
       if (!cubiertos.has(claveTokens(can.tokens))) {
         items.push({ estado: 'falta', grupo: formasDe(can.tokens),
           texto: 'Te faltó analizar estas palabras: no las agrupaste en ningún sintagma.' });
@@ -1005,7 +1051,9 @@
       g.className = 'resultado-grupo';
       g.textContent = '«' + grupo + '» ';
       let texto = '— ' + can.tipo + ' / ' + ETIQUETAS_FUNCION[can.funcion];
-      if (requiereNucleo(can.tipo, can.funcion)) {
+      if (can.eliptico) {
+        texto += ' (elíptico)';
+      } else if (requiereNucleo(can.tipo, can.funcion)) {
         texto += ' (núcleo: «' + oracion.tokens.find(t => t.id === can.nucleo).forma + '»)';
       }
       const t = document.createTextNode(texto);
