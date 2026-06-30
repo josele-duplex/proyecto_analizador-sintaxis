@@ -236,6 +236,94 @@
     color:var(--c-SN-text);
     cursor:pointer;
   }
+
+  /* ── Barra de acciones (Comprobar / Ver solución) ── */
+  #barra-acciones{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    margin-top:32px;
+  }
+
+  .btn-principal{
+    font-family:var(--font-ui);
+    font-size:15px;
+    font-weight:700;
+    padding:11px 28px;
+    border-radius:999px;
+    border:none;
+    background:#0F766E;
+    color:#fff;
+    cursor:pointer;
+  }
+
+  .btn-principal:disabled{
+    background:#C9C3B5;
+    cursor:not-allowed;
+  }
+
+  .btn-secundario{
+    font-family:var(--font-ui);
+    font-size:15px;
+    font-weight:700;
+    padding:11px 22px;
+    border-radius:999px;
+    border:1px solid var(--borde-token);
+    background:transparent;
+    color:#5C6B7E;
+    cursor:pointer;
+  }
+
+  /* ── Indicadores de estado sobre los tokens tras comprobar ── */
+  .token.estado-ok{   box-shadow:0 0 0 3px #15803D; }
+  .token.estado-alt{  box-shadow:0 0 0 3px #1E40AF; }
+  .token.estado-error{box-shadow:0 0 0 3px #BE123C; }
+
+  /* ── Panel de resultados ── */
+  #resultados{
+    max-width:760px;
+    margin:24px auto 0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .resultado-item{
+    font-family:var(--font-ui);
+    font-size:14px;
+    line-height:1.5;
+    padding:12px 16px;
+    border-radius:12px;
+    border:1px solid var(--borde-token);
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+  }
+
+  .resultado-item .icono{
+    font-size:16px;
+    line-height:1.4;
+    flex-shrink:0;
+  }
+
+  .resultado-item.ok{    background:#D6F0E3; border-color:#15803D; }
+  .resultado-item.alt{   background:#D6E4F7; border-color:#1E40AF; }
+  .resultado-item.error{ background:#FDE8E8; border-color:#BE123C; }
+  .resultado-item.falta{ background:#FEF3C7; border-color:#B45309; }
+
+  .resultado-grupo{
+    font-family:var(--font-oracion);
+    font-weight:600;
+  }
+
+  #resumen-resultados{
+    font-family:var(--font-ui);
+    font-size:15px;
+    font-weight:700;
+    text-align:center;
+    color:var(--texto-token);
+    margin-bottom:4px;
+  }
 </style>
 </head>
 <body>
@@ -261,6 +349,13 @@
 </div>
 
 <div id="oracion"></div>
+
+<div id="barra-acciones">
+  <button id="btn-comprobar" class="btn-principal">Comprobar</button>
+  <button id="btn-ver-solucion" class="btn-secundario">Ver solución</button>
+</div>
+
+<div id="resultados"></div>
 
 <div id="panel-tipo">
   <div class="panel-fila">
@@ -304,7 +399,48 @@
       { id: 18, forma: "flores",     categoria: "Sust" },
       { id: 19, forma: "del",        categoria: "Prep" },
       { id: 20, forma: "jardín",     categoria: "Sust" }
-    ]
+    ],
+
+    // Modelo plano: el verbo es SV/Predicado y cada complemento es un
+    // sintagma hermano (igual que el ejemplo del GDD §5.1).
+    solucion_canonica: {
+      sintagmas: [
+        { id: "s1", tokens: [0],                     tipo: "SAdv", funcion: "CC_Tiempo", nucleo: 0  },
+        { id: "s2", tokens: [1,2,3,4,5,6],           tipo: "SN",   funcion: "Sujeto",    nucleo: 3  },
+        { id: "s3", tokens: [7],                     tipo: "SV",   funcion: "Predicado", nucleo: 7  },
+        { id: "s4", tokens: [8],                     tipo: "SAdv", funcion: "CC_Modo",   nucleo: 8  },
+        { id: "s5", tokens: [9,10,11,12,13],         tipo: "SP",   funcion: "CI",        nucleo: 11 },
+        { id: "s6", tokens: [14,15,16,17,18,19,20],  tipo: "SN",   funcion: "CD",        nucleo: 16 }
+      ]
+    },
+
+    // Lecturas alternativas aceptables para la MISMA segmentación (mismo
+    // conjunto de tokens, distinto tipo/función). Esta oración no tiene
+    // ninguna sólida a nivel de constituyente; el mecanismo queda listo.
+    alternativas: [],
+
+    // Mensajes para errores de SEGMENTACIÓN previsibles, identificados por
+    // el conjunto exacto de tokens que el alumno agrupó mal.
+    feedback: {
+      errores_comunes: [
+        {
+          tokens: [5,6],
+          mensaje: "«de María» no es un complemento del verbo: forma parte del sujeto «los dos hermanos pequeños de María» (¿de quién son hermanos? de María). Modifica al sustantivo «hermanos»."
+        },
+        {
+          tokens: [12,13],
+          mensaje: "«de Lengua» modifica a «profesora», no al verbo. Forma parte del sintagma «a su profesora de Lengua»."
+        },
+        {
+          tokens: [19,20],
+          mensaje: "«del jardín» no es un complemento del verbo. Pregúntate: ¿entregaron del jardín? No. Lo que está del jardín son las flores: forma parte del SN «un precioso ramo de flores del jardín»."
+        },
+        {
+          tokens: [17,18,19,20],
+          mensaje: "«de flores del jardín» depende del sustantivo «ramo», no del verbo. Forma parte del SN «un precioso ramo de flores del jardín» (CD)."
+        }
+      ]
+    }
   };
 
   // Funciones sintácticas válidas por tipo de sintagma (alcance v1: sin
@@ -361,7 +497,8 @@
       const tokenId = Number(span.dataset.tokenId);
       const sint = sintagmaDeToken(tokenId);
 
-      span.classList.remove('seleccionado', 'tipo-SN', 'tipo-SV', 'tipo-SP', 'tipo-SAdj', 'tipo-SAdv');
+      span.classList.remove('seleccionado', 'tipo-SN', 'tipo-SV', 'tipo-SP', 'tipo-SAdj', 'tipo-SAdv',
+                            'estado-ok', 'estado-alt', 'estado-error');
 
       if (sint) {
         span.classList.add('tipo-' + sint.tipo);
@@ -460,6 +597,7 @@
     actualizarEstiloTokens();
     resetPanelEtiquetado();
     actualizarPanelTipo();
+    limpiarResultados();
   }
 
   function cancelarSeleccion() {
@@ -536,6 +674,7 @@
 
     document.getElementById('form-eliptico').style.display = 'none';
     actualizarBadgeEliptico();
+    limpiarResultados();
   });
 
   document.getElementById('badge-eliptico').addEventListener('click', () => {
@@ -543,7 +682,192 @@
     if (idx !== -1) sintagmas.splice(idx, 1);
     sujetoEliptico = null;
     actualizarBadgeEliptico();
+    limpiarResultados();
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // MOTOR DE VALIDACIÓN
+  // Modelo de "conjuntos de tokens": cada sintagma del alumno se compara
+  // por su conjunto de ids contra la solución canónica (orden indiferente,
+  // discontinuos permitidos, sin solapamientos). Feedback solo al pulsar
+  // Comprobar; nunca durante la construcción.
+  // ─────────────────────────────────────────────────────────────
+
+  function claveTokens(tokens) {
+    return [...tokens].sort((a, b) => a - b).join(',');
+  }
+
+  function formasDe(tokens) {
+    return tokens
+      .map(id => oracion.tokens.find(t => t.id === id).forma)
+      .join(' ');
+  }
+
+  function buscarCanonico(tokens) {
+    const clave = claveTokens(tokens);
+    return oracion.solucion_canonica.sintagmas.find(s => claveTokens(s.tokens) === clave);
+  }
+
+  function buscarErrorComun(tokens) {
+    const clave = claveTokens(tokens);
+    return oracion.feedback.errores_comunes.find(e => claveTokens(e.tokens) === clave);
+  }
+
+  function buscarAlternativa(sintagmaId, tipo, funcion) {
+    return oracion.alternativas.find(a =>
+      a.sintagma_id === sintagmaId && a.tipo_alt === tipo && a.funcion_alt === funcion);
+  }
+
+  function marcarEstado(tokens, clase) {
+    tokens.forEach(id => {
+      const span = document.querySelector('.token[data-token-id="' + id + '"]');
+      if (span) span.classList.add(clase);
+    });
+  }
+
+  function limpiarResultados() {
+    document.getElementById('resultados').innerHTML = '';
+    document.querySelectorAll('.token').forEach(s =>
+      s.classList.remove('estado-ok', 'estado-alt', 'estado-error'));
+  }
+
+  function comprobar() {
+    limpiarResultados();
+
+    const items = [];
+    let nOk = 0;
+    const cubiertos = new Set();
+
+    sintagmas.forEach(sint => {
+      // Caso especial: sujeto elíptico.
+      if (sint.eliptico) {
+        const canElip = oracion.solucion_canonica.sintagmas.find(s => s.eliptico);
+        if (canElip) {
+          if (canElip.persona === sint.persona) {
+            nOk++;
+            items.push({ estado: 'ok', grupo: 'Sujeto elíptico', texto: 'Sujeto elíptico correcto.' });
+          } else {
+            items.push({ estado: 'error', grupo: 'Sujeto elíptico', texto: 'El sujeto es elíptico, pero la persona gramatical no es la correcta. Fíjate en la desinencia del verbo.' });
+          }
+        } else {
+          items.push({ estado: 'error', grupo: 'Sujeto elíptico', texto: 'Esta oración tiene sujeto explícito («los dos hermanos pequeños de María»). No lleva sujeto elíptico.' });
+        }
+        return;
+      }
+
+      const can = buscarCanonico(sint.tokens);
+
+      if (can) {
+        cubiertos.add(claveTokens(can.tokens));
+
+        if (can.tipo === sint.tipo && can.funcion === sint.funcion) {
+          marcarEstado(sint.tokens, 'estado-ok');
+          nOk++;
+          items.push({ estado: 'ok', grupo: formasDe(sint.tokens),
+            texto: 'Análisis correcto: ' + sint.tipo + ' / ' + ETIQUETAS_FUNCION[sint.funcion] + '.' });
+        } else {
+          const alt = buscarAlternativa(can.id, sint.tipo, sint.funcion);
+          if (alt) {
+            marcarEstado(sint.tokens, 'estado-alt');
+            items.push({ estado: 'alt', grupo: formasDe(sint.tokens), texto: alt.nota });
+          } else {
+            marcarEstado(sint.tokens, 'estado-error');
+            let texto;
+            if (can.tipo !== sint.tipo) {
+              texto = 'Lo has etiquetado como ' + sint.tipo + ', pero su tipo es ' + can.tipo +
+                '. Fíjate en el núcleo del sintagma.';
+            } else {
+              texto = 'Lo has clasificado como ' + ETIQUETAS_FUNCION[sint.funcion] +
+                ', pero su función es ' + ETIQUETAS_FUNCION[can.funcion] + '.';
+            }
+            items.push({ estado: 'error', grupo: formasDe(sint.tokens), texto: texto });
+          }
+        }
+      } else {
+        // No coincide con ningún sintagma canónico: error de segmentación.
+        marcarEstado(sint.tokens, 'estado-error');
+        const ec = buscarErrorComun(sint.tokens);
+        const texto = ec
+          ? ec.mensaje
+          : 'Esta agrupación no se corresponde con ningún sintagma de la oración. Revisa qué palabras forman realmente una unidad.';
+        items.push({ estado: 'error', grupo: formasDe(sint.tokens), texto: texto });
+      }
+    });
+
+    // Sintagmas canónicos que el alumno no llegó a analizar (sin revelar
+    // su tipo/función: no es un error, es algo pendiente).
+    oracion.solucion_canonica.sintagmas.forEach(can => {
+      if (can.eliptico) return;
+      if (!cubiertos.has(claveTokens(can.tokens))) {
+        items.push({ estado: 'falta', grupo: formasDe(can.tokens),
+          texto: 'Te faltó analizar estas palabras: no las agrupaste en ningún sintagma.' });
+      }
+    });
+
+    renderResultados(items, nOk, oracion.solucion_canonica.sintagmas.length);
+  }
+
+  function renderResultados(items, nOk, total) {
+    const cont = document.getElementById('resultados');
+    cont.innerHTML = '';
+
+    const resumen = document.createElement('div');
+    resumen.id = 'resumen-resultados';
+    resumen.textContent = 'Resultado: ' + nOk + ' de ' + total + ' sintagmas correctos.';
+    cont.appendChild(resumen);
+
+    const ICONO = { ok: '✔', alt: '◎', error: '✘', falta: '•' };
+
+    items.forEach(it => {
+      const div = document.createElement('div');
+      div.className = 'resultado-item ' + it.estado;
+
+      const icono = document.createElement('span');
+      icono.className = 'icono';
+      icono.textContent = ICONO[it.estado];
+
+      const cuerpo = document.createElement('span');
+      const grupo = document.createElement('span');
+      grupo.className = 'resultado-grupo';
+      grupo.textContent = '«' + it.grupo + '» ';
+      cuerpo.appendChild(grupo);
+      cuerpo.appendChild(document.createTextNode('— ' + it.texto));
+
+      div.appendChild(icono);
+      div.appendChild(cuerpo);
+      cont.appendChild(div);
+    });
+  }
+
+  function verSolucion() {
+    // Acción explícita y registrable (el registro real es de la Fase 3).
+    console.log('[Analizador] El alumno ha pedido "Ver solución" para', oracion.id);
+
+    const cont = document.getElementById('resultados');
+    cont.innerHTML = '';
+
+    const titulo = document.createElement('div');
+    titulo.id = 'resumen-resultados';
+    titulo.textContent = 'Solución de referencia';
+    cont.appendChild(titulo);
+
+    oracion.solucion_canonica.sintagmas.forEach(can => {
+      const div = document.createElement('div');
+      div.className = 'resultado-item ok';
+      const grupo = can.eliptico ? 'Sujeto elíptico' : formasDe(can.tokens);
+      div.innerHTML = '';
+      const g = document.createElement('span');
+      g.className = 'resultado-grupo';
+      g.textContent = '«' + grupo + '» ';
+      const t = document.createTextNode('— ' + can.tipo + ' / ' + ETIQUETAS_FUNCION[can.funcion]);
+      div.appendChild(g);
+      div.appendChild(t);
+      cont.appendChild(div);
+    });
+  }
+
+  document.getElementById('btn-comprobar').addEventListener('click', comprobar);
+  document.getElementById('btn-ver-solucion').addEventListener('click', verSolucion);
 
   renderOracion(oracion);
 </script>
