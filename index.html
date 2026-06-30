@@ -90,18 +90,30 @@
     background:#FFFFFF;
     border-top:1px solid var(--borde-token);
     box-shadow:0 -4px 16px rgba(15,35,66,.08);
-    padding:16px 20px;
+    padding:14px 20px;
     display:flex;
-    flex-wrap:wrap;
+    flex-direction:column;
     gap:10px;
-    align-items:center;
-    justify-content:center;
     transform:translateY(100%);
     transition:transform .22s ease;
   }
 
   #panel-tipo.visible{
     transform:translateY(0);
+  }
+
+  .panel-fila{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+  }
+
+  #fila-funcion{
+    display:none;
+    padding-top:8px;
+    border-top:1px dashed var(--borde-token);
   }
 
   .panel-etiqueta{
@@ -130,6 +142,24 @@
   .btn-tipo[data-tipo="SAdj"].activo{ background:var(--c-SAdj-bg); border-color:var(--c-SAdj-border); color:var(--c-SAdj-text); }
   .btn-tipo[data-tipo="SAdv"].activo{ background:var(--c-SAdv-bg); border-color:var(--c-SAdv-border); color:var(--c-SAdv-text); }
 
+  .btn-funcion{
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:700;
+    padding:7px 14px;
+    border-radius:999px;
+    border:2px solid transparent;
+    background:var(--bg-token);
+    color:#5C6B7E;
+    cursor:pointer;
+  }
+
+  .btn-funcion.activo{
+    background:#E5F4F1;
+    border-color:#0F766E;
+    color:#115E59;
+  }
+
   .btn-accion{
     font-family:var(--font-ui);
     font-size:14px;
@@ -156,23 +186,96 @@
     color:#5C6B7E;
     border:1px solid var(--borde-token);
   }
+
+  #bloque-eliptico{
+    display:flex;
+    justify-content:center;
+    margin-bottom:20px;
+  }
+
+  .btn-eliptico{
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:700;
+    padding:7px 14px;
+    border-radius:999px;
+    border:1px dashed var(--borde-token);
+    background:transparent;
+    color:#5C6B7E;
+    cursor:pointer;
+  }
+
+  .form-eliptico{
+    display:none;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .form-eliptico select{
+    font-family:var(--font-ui);
+    font-size:13px;
+    padding:7px 10px;
+    border-radius:8px;
+    border:1px solid var(--borde-token);
+    color:var(--texto-token);
+  }
+
+  .badge-eliptico{
+    display:none;
+    align-items:center;
+    gap:6px;
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:700;
+    padding:7px 14px;
+    border-radius:999px;
+    background:var(--c-SN-bg);
+    border:1px solid var(--c-SN-border);
+    color:var(--c-SN-text);
+    cursor:pointer;
+  }
 </style>
 </head>
 <body>
 
 <h1>Analizador de Oraciones</h1>
 
+<div id="bloque-eliptico">
+  <button id="btn-eliptico" class="btn-eliptico">+ Sujeto elíptico</button>
+  <div id="form-eliptico" class="form-eliptico">
+    <span class="panel-etiqueta">Persona del sujeto elíptico:</span>
+    <select id="select-persona">
+      <option value="1sg">1ª persona singular (yo)</option>
+      <option value="2sg">2ª persona singular (tú)</option>
+      <option value="3sg">3ª persona singular (él/ella/usted)</option>
+      <option value="1pl">1ª persona plural (nosotros)</option>
+      <option value="2pl">2ª persona plural (vosotros)</option>
+      <option value="3pl">3ª persona plural (ellos/ellas/ustedes)</option>
+    </select>
+    <button id="btn-confirmar-eliptico" class="btn-accion" style="background:#0F766E;color:#fff">Confirmar</button>
+    <button id="btn-cancelar-eliptico" class="btn-accion">Cancelar</button>
+  </div>
+  <span id="badge-eliptico" class="badge-eliptico"></span>
+</div>
+
 <div id="oracion"></div>
 
 <div id="panel-tipo">
-  <span class="panel-etiqueta">Tipo de sintagma:</span>
-  <button class="btn-tipo" data-tipo="SN">SN</button>
-  <button class="btn-tipo" data-tipo="SV">SV</button>
-  <button class="btn-tipo" data-tipo="SP">SP</button>
-  <button class="btn-tipo" data-tipo="SAdj">SAdj</button>
-  <button class="btn-tipo" data-tipo="SAdv">SAdv</button>
-  <button id="btn-confirmar" class="btn-accion" disabled>Confirmar</button>
-  <button id="btn-cancelar" class="btn-accion">Cancelar</button>
+  <div class="panel-fila">
+    <span class="panel-etiqueta">Tipo de sintagma:</span>
+    <button class="btn-tipo" data-tipo="SN">SN</button>
+    <button class="btn-tipo" data-tipo="SV">SV</button>
+    <button class="btn-tipo" data-tipo="SP">SP</button>
+    <button class="btn-tipo" data-tipo="SAdj">SAdj</button>
+    <button class="btn-tipo" data-tipo="SAdv">SAdv</button>
+  </div>
+  <div class="panel-fila" id="fila-funcion"></div>
+  <div class="panel-fila">
+    <button id="btn-confirmar" class="btn-accion" disabled>Confirmar</button>
+    <button id="btn-cancelar" class="btn-accion">Cancelar</button>
+  </div>
 </div>
 
 <script>
@@ -204,13 +307,38 @@
     ]
   };
 
+  // Funciones sintácticas válidas por tipo de sintagma (alcance v1: sin
+  // Atributo ni C. Agente, que exigen copulativa o pasiva — fuera de v1).
+  const FUNCIONES_POR_TIPO = {
+    SN:   ['Sujeto', 'CD', 'CPred'],
+    SV:   ['Predicado'],
+    SP:   ['CD', 'CI', 'CC_Lugar', 'CC_Tiempo', 'CC_Modo', 'CC_Causa', 'CRV'],
+    SAdj: ['CPred'],
+    SAdv: ['CC_Lugar', 'CC_Tiempo', 'CC_Modo']
+  };
+
+  const ETIQUETAS_FUNCION = {
+    Sujeto: 'Sujeto',
+    CD: 'CD',
+    CI: 'CI',
+    CC_Lugar: 'CC Lugar',
+    CC_Tiempo: 'CC Tiempo',
+    CC_Modo: 'CC Modo',
+    CC_Causa: 'CC Causa',
+    CPred: 'CPred',
+    CRV: 'CRV',
+    Predicado: 'Predicado'
+  };
+
   // Estado de selección: ids de token actualmente seleccionados.
   const seleccion = new Set();
 
-  // Sintagmas ya etiquetados: { id, tokens: [...], tipo }.
+  // Sintagmas ya etiquetados: { id, tokens: [...], tipo, funcion }.
   const sintagmas = [];
 
   let tipoActivo = null;
+  let funcionActiva = null;
+  let sujetoEliptico = null; // { persona, etiqueta } o null
 
   function sintagmaDeToken(tokenId) {
     return sintagmas.find(s => s.tokens.includes(tokenId));
@@ -248,44 +376,96 @@
     panel.classList.toggle('visible', seleccion.size > 0);
 
     if (seleccion.size === 0) {
-      tipoActivo = null;
-      actualizarBotonesTipo();
+      resetPanelEtiquetado();
     }
+  }
+
+  function resetPanelEtiquetado() {
+    tipoActivo = null;
+    funcionActiva = null;
+    actualizarBotonesTipo();
+    renderBotonesFuncion();
+    actualizarBotonConfirmar();
   }
 
   function actualizarBotonesTipo() {
     document.querySelectorAll('.btn-tipo').forEach(btn => {
       btn.classList.toggle('activo', btn.dataset.tipo === tipoActivo);
     });
-    document.getElementById('btn-confirmar').disabled = !tipoActivo;
   }
 
   function elegirTipo(tipo) {
     tipoActivo = (tipoActivo === tipo) ? null : tipo;
+    funcionActiva = null;
     actualizarBotonesTipo();
+    renderBotonesFuncion();
+    actualizarBotonConfirmar();
+  }
+
+  function renderBotonesFuncion() {
+    const fila = document.getElementById('fila-funcion');
+    fila.innerHTML = '';
+
+    if (!tipoActivo) {
+      fila.style.display = 'none';
+      return;
+    }
+
+    fila.style.display = 'flex';
+
+    const etiqueta = document.createElement('span');
+    etiqueta.className = 'panel-etiqueta';
+    etiqueta.textContent = 'Función:';
+    fila.appendChild(etiqueta);
+
+    FUNCIONES_POR_TIPO[tipoActivo].forEach(funcion => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-funcion';
+      btn.dataset.funcion = funcion;
+      btn.textContent = ETIQUETAS_FUNCION[funcion];
+      btn.addEventListener('click', () => elegirFuncion(funcion));
+      fila.appendChild(btn);
+    });
+
+    actualizarBotonesFuncion();
+  }
+
+  function elegirFuncion(funcion) {
+    funcionActiva = (funcionActiva === funcion) ? null : funcion;
+    actualizarBotonesFuncion();
+    actualizarBotonConfirmar();
+  }
+
+  function actualizarBotonesFuncion() {
+    document.querySelectorAll('.btn-funcion').forEach(btn => {
+      btn.classList.toggle('activo', btn.dataset.funcion === funcionActiva);
+    });
+  }
+
+  function actualizarBotonConfirmar() {
+    document.getElementById('btn-confirmar').disabled = !(tipoActivo && funcionActiva);
   }
 
   function confirmarSintagma() {
-    if (!tipoActivo || seleccion.size === 0) return;
+    if (!tipoActivo || !funcionActiva || seleccion.size === 0) return;
 
     sintagmas.push({
       id: 's' + (sintagmas.length + 1),
       tokens: [...seleccion],
-      tipo: tipoActivo
+      tipo: tipoActivo,
+      funcion: funcionActiva
     });
 
     seleccion.clear();
-    tipoActivo = null;
     actualizarEstiloTokens();
-    actualizarBotonesTipo();
+    resetPanelEtiquetado();
     actualizarPanelTipo();
   }
 
   function cancelarSeleccion() {
     seleccion.clear();
-    tipoActivo = null;
     actualizarEstiloTokens();
-    actualizarBotonesTipo();
+    resetPanelEtiquetado();
     actualizarPanelTipo();
   }
 
@@ -313,6 +493,57 @@
   });
   document.getElementById('btn-confirmar').addEventListener('click', confirmarSintagma);
   document.getElementById('btn-cancelar').addEventListener('click', cancelarSeleccion);
+
+  function actualizarBadgeEliptico() {
+    const badge = document.getElementById('badge-eliptico');
+    const btnAbrir = document.getElementById('btn-eliptico');
+
+    if (sujetoEliptico) {
+      badge.style.display = 'inline-flex';
+      badge.textContent = 'Sujeto elíptico: ' + sujetoEliptico.etiqueta + ' ✕';
+      btnAbrir.style.display = 'none';
+    } else {
+      badge.style.display = 'none';
+      btnAbrir.style.display = 'inline-block';
+    }
+  }
+
+  document.getElementById('btn-eliptico').addEventListener('click', () => {
+    document.getElementById('form-eliptico').style.display = 'flex';
+    document.getElementById('btn-eliptico').style.display = 'none';
+  });
+
+  document.getElementById('btn-cancelar-eliptico').addEventListener('click', () => {
+    document.getElementById('form-eliptico').style.display = 'none';
+    document.getElementById('btn-eliptico').style.display = 'inline-block';
+  });
+
+  document.getElementById('btn-confirmar-eliptico').addEventListener('click', () => {
+    const select = document.getElementById('select-persona');
+    sujetoEliptico = {
+      persona: select.value,
+      etiqueta: select.options[select.selectedIndex].text
+    };
+
+    sintagmas.push({
+      id: 's' + (sintagmas.length + 1),
+      tokens: [],
+      tipo: 'SN',
+      funcion: 'Sujeto',
+      eliptico: true,
+      persona: sujetoEliptico.persona
+    });
+
+    document.getElementById('form-eliptico').style.display = 'none';
+    actualizarBadgeEliptico();
+  });
+
+  document.getElementById('badge-eliptico').addEventListener('click', () => {
+    const idx = sintagmas.findIndex(s => s.eliptico);
+    if (idx !== -1) sintagmas.splice(idx, 1);
+    sujetoEliptico = null;
+    actualizarBadgeEliptico();
+  });
 
   renderOracion(oracion);
 </script>
