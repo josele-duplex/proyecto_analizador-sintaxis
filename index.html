@@ -440,6 +440,7 @@
 <div id="barra-acciones">
   <button id="btn-comprobar" class="btn-principal">Comprobar</button>
   <button id="btn-ver-solucion" class="btn-secundario">Ver solución</button>
+  <button id="btn-saltar" class="btn-secundario">Saltar oración →</button>
 </div>
 
 <div id="resultados"></div>
@@ -572,6 +573,107 @@
         }
       ]
     }
+  },
+  {
+    id: "oracion_003",
+    texto: "Mi hermano confía en sus amigos.",
+    tokens: [
+      { id: 0, forma: "Mi",      categoria: "Det" },
+      { id: 1, forma: "hermano", categoria: "Sust" },
+      { id: 2, forma: "confía",  categoria: "V" },
+      { id: 3, forma: "en",      categoria: "Prep" },
+      { id: 4, forma: "sus",     categoria: "Det" },
+      { id: 5, forma: "amigos",  categoria: "Sust" }
+    ],
+
+    // CRV: «confiar en» rige la preposición «en». La prueba fiable es
+    // «eso/ello» (confía en eso), no preguntar ¿dónde? ni ¿qué?.
+    solucion_canonica: {
+      sintagmas: [
+        { id: "s1", tokens: [0,1],   tipo: "SN", funcion: "Sujeto",    nucleo: 1 },
+        { id: "s2", tokens: [2],     tipo: "SV", funcion: "Predicado", nucleo: 2 },
+        { id: "s3", tokens: [3,4,5], tipo: "SP", funcion: "CRV",       nucleo: 5 }
+      ]
+    },
+
+    alternativas: [],
+
+    feedback: {
+      errores_comunes: [
+        {
+          tokens: [4,5],
+          mensaje: "La preposición «en» forma parte del sintagma: el verbo «confiar» la exige. El SP completo es «en sus amigos»."
+        }
+      ]
+    }
+  },
+  {
+    id: "oracion_004",
+    texto: "Compramos pan en la panadería.",
+    tokens: [
+      { id: 0, forma: "Compramos", categoria: "V" },
+      { id: 1, forma: "pan",       categoria: "Sust" },
+      { id: 2, forma: "en",        categoria: "Prep" },
+      { id: 3, forma: "la",        categoria: "Det" },
+      { id: 4, forma: "panadería", categoria: "Sust" }
+    ],
+
+    // Sujeto elíptico 1ª persona del plural ("nosotros" en "-amos").
+    // CD sin preposición (pan → lo compramos) y CC de lugar suprimible.
+    solucion_canonica: {
+      sintagmas: [
+        { id: "s0", eliptico: true, persona: "1pl", tokens: [], tipo: "SN", funcion: "Sujeto" },
+        { id: "s1", tokens: [0],     tipo: "SV", funcion: "Predicado", nucleo: 0 },
+        { id: "s2", tokens: [1],     tipo: "SN", funcion: "CD",        nucleo: 1 },
+        { id: "s3", tokens: [2,3,4], tipo: "SP", funcion: "CC_Lugar",  nucleo: 4 }
+      ]
+    },
+
+    alternativas: [],
+
+    feedback: {
+      errores_comunes: [
+        {
+          tokens: [3,4],
+          mensaje: "La preposición «en» forma parte del complemento de lugar: el SP completo es «en la panadería»."
+        }
+      ]
+    }
+  },
+  {
+    id: "oracion_005",
+    texto: "Ayer visité a mis abuelos.",
+    tokens: [
+      { id: 0, forma: "Ayer",    categoria: "Adv" },
+      { id: 1, forma: "visité",  categoria: "V" },
+      { id: 2, forma: "a",       categoria: "Prep" },
+      { id: 3, forma: "mis",     categoria: "Det" },
+      { id: 4, forma: "abuelos", categoria: "Sust" }
+    ],
+
+    // Sujeto elíptico 1ª persona del singular ("yo" en "visité").
+    // CD DE PERSONA con «a»: «visitar a alguien» es transitivo, así que
+    // «a mis abuelos» es CD (los visité), no CI. Caso donde la pregunta
+    // «¿qué?» falla y hay que pronominalizar.
+    solucion_canonica: {
+      sintagmas: [
+        { id: "s0", eliptico: true, persona: "1sg", tokens: [], tipo: "SN",   funcion: "Sujeto" },
+        { id: "s1", tokens: [0],     tipo: "SAdv", funcion: "CC_Tiempo", nucleo: 0 },
+        { id: "s2", tokens: [1],     tipo: "SV",   funcion: "Predicado", nucleo: 1 },
+        { id: "s3", tokens: [2,3,4], tipo: "SP",   funcion: "CD",        nucleo: 4 }
+      ]
+    },
+
+    alternativas: [],
+
+    feedback: {
+      errores_comunes: [
+        {
+          tokens: [3,4],
+          mensaje: "La preposición «a» forma parte del sintagma: el grupo completo es «a mis abuelos» (CD de persona)."
+        }
+      ]
+    }
   }
   ]; // fin de ORACIONES
 
@@ -588,6 +690,14 @@
   }
 
   const oracion = seleccionarOracion();
+
+  // Salta a la siguiente oración del listado (en orden, y vuelve a la
+  // primera al llegar al final). Recarga la página para empezar limpio.
+  function saltarOracion() {
+    const indiceActual = ORACIONES.findIndex(o => o.id === oracion.id);
+    const siguiente = ORACIONES[(indiceActual + 1) % ORACIONES.length];
+    window.location.search = '?oracion=' + siguiente.id;
+  }
 
   // Funciones sintácticas válidas por tipo de sintagma (alcance v1: sin
   // Atributo ni C. Agente, que exigen copulativa o pasiva — fuera de v1).
@@ -1225,6 +1335,7 @@
 
   document.getElementById('btn-comprobar').addEventListener('click', comprobar);
   document.getElementById('btn-ver-solucion').addEventListener('click', verSolucion);
+  document.getElementById('btn-saltar').addEventListener('click', saltarOracion);
 
   renderOracion(oracion);
 </script>
