@@ -17,6 +17,12 @@
     --bg-token:#E8E9EC;
     --borde-token:#C9C3B5;
     --texto-token:#1C1510;
+
+    --c-SN-bg:#DBEAFE;   --c-SN-border:#60A5FA;   --c-SN-text:#1E3A8A;
+    --c-SV-bg:#D1FAE5;   --c-SV-border:#34D399;   --c-SV-text:#065F46;
+    --c-SP-bg:#EDE9FE;   --c-SP-border:#A78BFA;   --c-SP-text:#4C1D95;
+    --c-SAdj-bg:#FCE7F3; --c-SAdj-border:#F472B6; --c-SAdj-text:#9D174D;
+    --c-SAdv-bg:#FFEDD5; --c-SAdv-border:#FB923C; --c-SAdv-text:#9A3412;
   }
 
   body{
@@ -66,10 +72,89 @@
     border-color:#D97706;
   }
 
+  .token.tipo-SN{   background:var(--c-SN-bg);   border-color:var(--c-SN-border);   color:var(--c-SN-text);   cursor:default; }
+  .token.tipo-SV{   background:var(--c-SV-bg);   border-color:var(--c-SV-border);   color:var(--c-SV-text);   cursor:default; }
+  .token.tipo-SP{   background:var(--c-SP-bg);   border-color:var(--c-SP-border);   color:var(--c-SP-text);   cursor:default; }
+  .token.tipo-SAdj{ background:var(--c-SAdj-bg); border-color:var(--c-SAdj-border); color:var(--c-SAdj-text); cursor:default; }
+  .token.tipo-SAdv{ background:var(--c-SAdv-bg); border-color:var(--c-SAdv-border); color:var(--c-SAdv-text); cursor:default; }
+
   .puntuacion{
     font-family:var(--font-oracion);
     font-size:22px;
     color:var(--texto-token);
+  }
+
+  #panel-tipo{
+    position:fixed;
+    left:0;right:0;bottom:0;
+    background:#FFFFFF;
+    border-top:1px solid var(--borde-token);
+    box-shadow:0 -4px 16px rgba(15,35,66,.08);
+    padding:16px 20px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    transform:translateY(100%);
+    transition:transform .22s ease;
+  }
+
+  #panel-tipo.visible{
+    transform:translateY(0);
+  }
+
+  .panel-etiqueta{
+    font-family:var(--font-ui);
+    font-size:13px;
+    font-weight:700;
+    color:#5C6B7E;
+    margin-right:6px;
+  }
+
+  .btn-tipo{
+    font-family:var(--font-ui);
+    font-size:14px;
+    font-weight:700;
+    padding:8px 16px;
+    border-radius:999px;
+    border:2px solid transparent;
+    background:var(--bg-token);
+    color:#5C6B7E;
+    cursor:pointer;
+  }
+
+  .btn-tipo[data-tipo="SN"].activo{   background:var(--c-SN-bg);   border-color:var(--c-SN-border);   color:var(--c-SN-text); }
+  .btn-tipo[data-tipo="SV"].activo{   background:var(--c-SV-bg);   border-color:var(--c-SV-border);   color:var(--c-SV-text); }
+  .btn-tipo[data-tipo="SP"].activo{   background:var(--c-SP-bg);   border-color:var(--c-SP-border);   color:var(--c-SP-text); }
+  .btn-tipo[data-tipo="SAdj"].activo{ background:var(--c-SAdj-bg); border-color:var(--c-SAdj-border); color:var(--c-SAdj-text); }
+  .btn-tipo[data-tipo="SAdv"].activo{ background:var(--c-SAdv-bg); border-color:var(--c-SAdv-border); color:var(--c-SAdv-text); }
+
+  .btn-accion{
+    font-family:var(--font-ui);
+    font-size:14px;
+    font-weight:700;
+    padding:8px 18px;
+    border-radius:999px;
+    border:none;
+    cursor:pointer;
+    margin-left:10px;
+  }
+
+  #btn-confirmar{
+    background:#0F766E;
+    color:#fff;
+  }
+
+  #btn-confirmar:disabled{
+    background:#C9C3B5;
+    cursor:not-allowed;
+  }
+
+  #btn-cancelar{
+    background:transparent;
+    color:#5C6B7E;
+    border:1px solid var(--borde-token);
   }
 </style>
 </head>
@@ -78,6 +163,17 @@
 <h1>Analizador de Oraciones</h1>
 
 <div id="oracion"></div>
+
+<div id="panel-tipo">
+  <span class="panel-etiqueta">Tipo de sintagma:</span>
+  <button class="btn-tipo" data-tipo="SN">SN</button>
+  <button class="btn-tipo" data-tipo="SV">SV</button>
+  <button class="btn-tipo" data-tipo="SP">SP</button>
+  <button class="btn-tipo" data-tipo="SAdj">SAdj</button>
+  <button class="btn-tipo" data-tipo="SAdv">SAdv</button>
+  <button id="btn-confirmar" class="btn-accion" disabled>Confirmar</button>
+  <button id="btn-cancelar" class="btn-accion">Cancelar</button>
+</div>
 
 <script>
   const oracion = {
@@ -111,20 +207,86 @@
   // Estado de selección: ids de token actualmente seleccionados.
   const seleccion = new Set();
 
+  // Sintagmas ya etiquetados: { id, tokens: [...], tipo }.
+  const sintagmas = [];
+
+  let tipoActivo = null;
+
+  function sintagmaDeToken(tokenId) {
+    return sintagmas.find(s => s.tokens.includes(tokenId));
+  }
+
   function alternarSeleccion(tokenId) {
+    if (sintagmaDeToken(tokenId)) return; // ya pertenece a un sintagma: no se reselecciona
+
     if (seleccion.has(tokenId)) {
       seleccion.delete(tokenId);
     } else {
       seleccion.add(tokenId);
     }
     actualizarEstiloTokens();
+    actualizarPanelTipo();
   }
 
   function actualizarEstiloTokens() {
     document.querySelectorAll('.token').forEach(span => {
       const tokenId = Number(span.dataset.tokenId);
-      span.classList.toggle('seleccionado', seleccion.has(tokenId));
+      const sint = sintagmaDeToken(tokenId);
+
+      span.classList.remove('seleccionado', 'tipo-SN', 'tipo-SV', 'tipo-SP', 'tipo-SAdj', 'tipo-SAdv');
+
+      if (sint) {
+        span.classList.add('tipo-' + sint.tipo);
+      } else if (seleccion.has(tokenId)) {
+        span.classList.add('seleccionado');
+      }
     });
+  }
+
+  function actualizarPanelTipo() {
+    const panel = document.getElementById('panel-tipo');
+    panel.classList.toggle('visible', seleccion.size > 0);
+
+    if (seleccion.size === 0) {
+      tipoActivo = null;
+      actualizarBotonesTipo();
+    }
+  }
+
+  function actualizarBotonesTipo() {
+    document.querySelectorAll('.btn-tipo').forEach(btn => {
+      btn.classList.toggle('activo', btn.dataset.tipo === tipoActivo);
+    });
+    document.getElementById('btn-confirmar').disabled = !tipoActivo;
+  }
+
+  function elegirTipo(tipo) {
+    tipoActivo = (tipoActivo === tipo) ? null : tipo;
+    actualizarBotonesTipo();
+  }
+
+  function confirmarSintagma() {
+    if (!tipoActivo || seleccion.size === 0) return;
+
+    sintagmas.push({
+      id: 's' + (sintagmas.length + 1),
+      tokens: [...seleccion],
+      tipo: tipoActivo
+    });
+
+    seleccion.clear();
+    tipoActivo = null;
+    actualizarEstiloTokens();
+    actualizarBotonesTipo();
+    actualizarPanelTipo();
+  }
+
+  function cancelarSeleccion() {
+    seleccion.clear();
+    tipoActivo = null;
+    actualizarEstiloTokens();
+    actualizarBotonesTipo();
+    actualizarPanelTipo();
   }
 
   function renderOracion(oracion) {
@@ -145,6 +307,12 @@
     punto.textContent = '.';
     contenedor.appendChild(punto);
   }
+
+  document.querySelectorAll('.btn-tipo').forEach(btn => {
+    btn.addEventListener('click', () => elegirTipo(btn.dataset.tipo));
+  });
+  document.getElementById('btn-confirmar').addEventListener('click', confirmarSintagma);
+  document.getElementById('btn-cancelar').addEventListener('click', cancelarSeleccion);
 
   renderOracion(oracion);
 </script>
